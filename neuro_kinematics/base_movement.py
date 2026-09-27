@@ -1,10 +1,11 @@
+# Importing necessary libraries
 from abc import ABC, abstractmethod
 from enum import Enum
 import numpy as np
 import time
 
 # =====================================================================
-# MICRO FSM: FORMAL KINEMATIC STATES (Stage 15)
+# MICRO FSM: FORMAL KINEMATIC STATES OF MOVEMENT
 # =====================================================================
 class MovementState(Enum):
     READY = "READY"
@@ -20,7 +21,7 @@ class BaseMovement(ABC):
         self.repetition_count = 0
         self.state = MovementState.READY
         
-        # Temporal Tracking for ML Features
+        # Temporal Tracking for Machine Learning Features
         self.last_frame_time = time.time()
         self.rep_start_time = None
         self.last_angle = 0.0
@@ -30,6 +31,7 @@ class BaseMovement(ABC):
         self.max_angle = 0.0
 
     @staticmethod
+    # Converting raw MediaPipe outputs into NumPy arrays for rapid vector math.
     def landmark_to_vector(landmark):
         return np.array([landmark.x, landmark.y, landmark.z], dtype=np.float64)
 
@@ -37,6 +39,7 @@ class BaseMovement(ABC):
         return self.landmark_to_vector(landmarks[landmark_enum.value])
 
     @staticmethod
+    # Calculating joint articulation angles using Euclidean dot products.
     def compute_joint_angle(point_top, point_vertex, point_bottom):
         a, b, c = np.asarray(point_top), np.asarray(point_vertex), np.asarray(point_bottom)
         v_ba, v_bc = a - b, c - b
@@ -46,6 +49,7 @@ class BaseMovement(ABC):
         return float(np.degrees(np.arccos(cos_theta)))
 
     @staticmethod
+    # Monitoring patient posture to detect and prevent compensatory leaning.
     def compute_trunk_angle(shoulder, hip):
         torso = np.asarray(shoulder) - np.asarray(hip)
         vertical = np.array([0.0, -1.0, 0.0])
@@ -54,21 +58,19 @@ class BaseMovement(ABC):
         cos_theta = np.clip(np.dot(torso, vertical) / norm_t, -1.0, 1.0)
         return float(np.degrees(np.arccos(cos_theta)))
 
-    # =====================================================================
-    # 10-POINT ML FEATURE CONTRACT (Stage 16)
-    # =====================================================================
+    # Constructing the 10-point Machine Learning Feature Contract vector which outputs pristine, structured numerical data to the SQLite database.
     def generate_feature_vector(self, current_angle, compensation, safety_flag):
-        """Generates the structured ML-ready numerical feature vector."""
+        """Generating the structured ML-ready numerical feature vector."""
         current_time = time.time()
         delta_time = current_time - self.last_frame_time
         
-        # Avoid division by zero on the first frame
+        # Avoiding division by zero on the first frame
         if delta_time > 0:
             angular_velocity = abs(current_angle - self.last_angle) / delta_time
         else:
             angular_velocity = 0.0
             
-        # Update ROM
+        # Updating Range of Motion ROM
         self.min_angle = min(self.min_angle, current_angle)
         self.max_angle = max(self.max_angle, current_angle)
         rom = self.max_angle - self.min_angle
@@ -89,7 +91,7 @@ class BaseMovement(ABC):
             'range_of_motion': rom
         }
         
-        # Update trackers for next frame
+        # Updating trackers for next frame
         self.last_frame_time = current_time
         self.last_angle = current_angle
         
@@ -97,5 +99,4 @@ class BaseMovement(ABC):
 
     @abstractmethod
     def evaluate_stroke_kinematics(self, landmarks, mp_pose):
-        """Must return: reps, feedback, safety_breach, ml_feature_dict"""
         pass

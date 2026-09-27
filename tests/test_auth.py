@@ -1,28 +1,29 @@
+# Importing necessary libraries for unit testing authentication security
 import unittest
 from database import hash_password_pbkdf2, verify_password
 
 class TestAuthenticationSecurity(unittest.TestCase):
     
     def test_pbkdf2_hashing(self):
-        """Test that PBKDF2 generates a unique salted hash every time."""
+        # Testing that PBKDF2 generates a unique salted hash every time.
         password = "secure_patient_password"
         hash1 = hash_password_pbkdf2(password)
         hash2 = hash_password_pbkdf2(password)
         
-        # Hashes should be different due to the os.urandom salt
+        # Hashes should be entirely different despite identical input due to os.urandom salt
         self.assertNotEqual(hash1, hash2)
-        # But both should verify successfully
+        # But both must verify successfully against the original string
         self.assertTrue(verify_password(hash1, password))
         self.assertTrue(verify_password(hash2, password))
         
     def test_invalid_password(self):
-        """Test that incorrect passwords are rejected."""
+        # Testing that incorrect passwords are automatically rejected.
         password = "my_password"
         hashed = hash_password_pbkdf2(password)
         self.assertFalse(verify_password(hashed, "wrong_password"))
         
     def test_legacy_hash_fallback(self):
-        """Test that legacy unsalted SHA256 hashes still verify properly."""
+        # Testing that legacy unsalted SHA256 hashes still verify properly.
         import hashlib
         legacy_pass = "old_password"
         legacy_hash = hashlib.sha256(legacy_pass.encode()).hexdigest()

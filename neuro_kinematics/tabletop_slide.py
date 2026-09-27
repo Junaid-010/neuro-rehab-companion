@@ -1,12 +1,14 @@
+# Importing essential libraries for numerical computations and time tracking.
 import time
 from neuro_kinematics.base_movement import BaseMovement, MovementState
 
 class TabletopSlideMovement(BaseMovement):
+    # Kinematic FSM for Hemorrhagic Stroke profiles. This focuses on low friction motor recruitment.
     def __init__(self):
         super().__init__()
         self.slide_target = 150.0
         self.retraction_target = 80.0
-        # Y-axis tolerance for shoulder hiking
+        # Here, Y-axis difference is detecting shoulder elevation compensation
         self.shoulder_hike_threshold = 0.05
 
     def evaluate_stroke_kinematics(self, landmarks, mp_pose):
@@ -23,7 +25,7 @@ class TabletopSlideMovement(BaseMovement):
         guidance_feedback = "Slide your hand forward across the table smoothly."
         safety_breach_alert = False
 
-        # 1. INVALID / SAFETY TRAP
+        # 1. Invalidating the movement if patient elevates shoulder to force the slide
         if shoulder_hike_val > self.shoulder_hike_threshold:
             self.state = MovementState.INVALID
             guidance_feedback = "POSTURE WARNING: Relax your neck. Do not hike your shoulder to slide your arm."
@@ -54,6 +56,6 @@ class TabletopSlideMovement(BaseMovement):
                 # Reset ROM tracking for the next repetition
                 self.min_angle, self.max_angle = 999.0, 0.0
 
-        # 3. GENERATE ML FEATURES
+        # 3. GENERATING MACHINE LEARNING FEATURES
         features = self.generate_feature_vector(elbow_angle, shoulder_hike_val, safety_breach_alert)
         return self.repetition_count, guidance_feedback, safety_breach_alert, features

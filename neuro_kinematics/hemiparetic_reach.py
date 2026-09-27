@@ -1,11 +1,14 @@
+# Importing essential libraries for numerical computations and time tracking.
 import time
 from neuro_kinematics.base_movement import BaseMovement, MovementState
 
 class HemipareticReachMovement(BaseMovement):
+    # Kinematic FSM for Anterior MCA Stroke profiles. This primarily focuses on extension recovery and limits compensatory trunk leaning.
     def __init__(self):
         super().__init__()
         self.extension_target = 145.0  
         self.retraction_target = 60.0  
+        # Trunk leaning > 25 degrees invalidates the repetition and prompts a warning
         self.compensatory_threshold = 25.0 
 
     def evaluate_stroke_kinematics(self, landmarks, mp_pose):
@@ -20,7 +23,7 @@ class HemipareticReachMovement(BaseMovement):
         guidance_feedback = "Extend your arm forward slowly toward the target zone."
         safety_breach_alert = False
 
-        # 1. INVALID / SAFETY TRAP
+        # 1. This invalidates movement if patient leans forward instead of using arm muscles
         if trunk_lean > self.compensatory_threshold:
             self.state = MovementState.INVALID
             guidance_feedback = "POSTURE WARNING: Keep your torso straight. Push using your arm muscles, not your back."
@@ -51,6 +54,6 @@ class HemipareticReachMovement(BaseMovement):
                 # Reset ROM for next rep
                 self.min_angle, self.max_angle = 999.0, 0.0
 
-        # 3. GENERATE ML FEATURES
+        # 3. GENERATING MACHINE LEARNING FEATURES
         features = self.generate_feature_vector(elbow_angle, trunk_lean, safety_breach_alert)
         return self.repetition_count, guidance_feedback, safety_breach_alert, features

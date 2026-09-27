@@ -1,7 +1,12 @@
+# Importing necessary libraries
 import numpy as np
 import math
 from PIL import Image, ImageDraw
 
+# =====================================================================
+# PROCEDURAL ANIMATION GENERATOR
+# This code below generates clinical demonstration GIFs programmatically to remove the need for external media dependencies or cloud-hosted instructional videos.
+# =====================================================================
 def draw_thick_line(draw, pt1, pt2, color, thickness):
     """Draws a thick line with rounded, realistic joints."""
     draw.line([pt1, pt2], fill=color, width=thickness)
@@ -21,7 +26,7 @@ def draw_base_body(draw, cx, cy):
     # Torso
     draw.ellipse([cx-75, cy-20, cx+75, cy+160], fill=(180, 180, 180)) 
     
-    # Legs (Dark Gray)
+    # Legs 
     draw_thick_line(draw, (cx-40, cy+140), (cx-40, cy+250), (100, 100, 100), 50)
     draw_thick_line(draw, (cx+40, cy+140), (cx+40, cy+250), (100, 100, 100), 50)
 
@@ -34,12 +39,13 @@ def generate_reach():
         draw = ImageDraw.Draw(img)
         draw_base_body(draw, cx, cy)
         
+        # Sine wave extension factor for smooth, naturalistic arm movement
         ext = (math.sin(t * 0.05) + 1) / 2 
         
-        # Right Arm (Static, resting on lap)
+        # Static right Arm 
         draw_thick_line(draw, (cx+60, cy+10), (cx+70, cy+100), (150, 150, 150), 35)
 
-        # Left Arm (Reaching - highlighted in clinical blue)
+        # Dynamic left arm reaching forward with realistic elbow and wrist articulation
         l_elb_x = int((cx - 65) - 30 * ext)
         l_elb_y = int(cy + 80 - 40 * ext)
         l_wri_x = int(l_elb_x + 10 + 50 * ext)
@@ -62,7 +68,7 @@ def generate_slide():
         draw = ImageDraw.Draw(img)
         draw_base_body(draw, cx, cy)
         
-        # Table
+        # Rendering therapy table
         draw.rectangle([cx-180, cy+110, cx+180, cy+130], fill=(139, 69, 19))
 
         ext = (math.sin(t * 0.05) + 1) / 2 
@@ -70,7 +76,7 @@ def generate_slide():
         # Right Arm
         draw_thick_line(draw, (cx+60, cy+10), (cx+70, cy+100), (150, 150, 150), 35)
         
-        # Left Arm (Sliding)
+        # Left Arm 
         l_elb_x = int((cx - 65) - 40 * ext)
         l_wri_x = int(l_elb_x - 30 - 60 * ext)
         

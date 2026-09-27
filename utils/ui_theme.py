@@ -1,13 +1,9 @@
-"""
-Neuro-Rehabilitation Support Engine
-------------------------------------
-Shared UI theme, styling utilities, and Lucide SVG icons.
-"""
-
+# Importing necessary libraries
 import streamlit as st
 
 # ================================================================
-# APPLICATION BRANDING
+# ARCHITECTURAL SEPARATION OF CONCERNS
+# This file isolates all CSS, styling, and raw SVG rendering away from the core application and AI logic files.
 # ================================================================
 
 APP_NAME = "Neuro-Rehabilitation Support Engine"
@@ -18,8 +14,8 @@ APP_SUBTITLE = "AI-Orchestrated Kinematic Guidance for Stroke Telerehabilitation
 # ================================================================
 
 PATIENT_COLORS = {
-    "background": "#FAF7F2",       # Warm Sand
-    "primary_text": "#3E2723",     # Slate Brown
+    "background": "#FAF7F2",       
+    "primary_text": "#3E2723",     
     "secondary_text": "#5D4037",
     "forest_green": "#2D6A4F",
     "terracotta": "#E07A5F",
@@ -51,7 +47,7 @@ CLINICIAN_COLORS = {
 # ================================================================
 
 def inject_patient_theme():
-    """Apply the Clinical Zen Patient Portal theme (No Sidebar)."""
+    # Injecting a minimalist, low-cognitive load UI for stroke patients.
     st.markdown(
         f"""
         <style>
@@ -73,7 +69,7 @@ def inject_patient_theme():
     )
 
 def inject_clinician_theme():
-    """Apply the Hybrid Technical Clinical Console theme (With Sidebar)."""
+    # Injecting a high density, analytical UI for clinical staff.
     st.markdown(
         f"""
         <style>
@@ -96,7 +92,7 @@ def inject_clinician_theme():
     )
 
 # ================================================================
-# LUCIDE ICON SYSTEM (Stage 12 & 14)
+# LUCIDE ICON SYSTEM 
 # ================================================================
 
 LUCIDE_ICONS = {
@@ -108,7 +104,7 @@ LUCIDE_ICONS = {
 }
 
 def get_icon_svg(name, size=24, color="currentColor"):
-    """Returns the raw HTML/SVG string for a given Lucide icon."""
+    # Below code returns the raw HTML/SVG string for a given Lucide icon
     path = LUCIDE_ICONS.get(name, "")
     if not path:
         return ""
@@ -121,14 +117,14 @@ def get_icon_svg(name, size=24, color="currentColor"):
     '''
 
 def render_brand_header(compact=False):
-    """
-    Renders the application identity using the new Lucide SVG icon system.
-    """
+    
+    # Below the code renders the application identity using the new Lucide SVG icon system.
+    
     brain_icon = get_icon_svg("Brain", size=28 if compact else 40, color="#2563EB" if compact else "#3E2723")
     
     if compact:
-        # Collapsed into a single line to prevent Streamlit from treating it as a code block!
+        # Collapsing into a single line to prevent Streamlit from treating it as a code block!
         st.markdown(f"<div style='padding: 0.4rem 0; margin-bottom: 1rem; display: flex; align-items: center;'>{brain_icon}<span style='font-size: 1.05rem; font-weight: 700; letter-spacing: 0.02em;'>{APP_NAME}</span></div>", unsafe_allow_html=True)
     else:
-        # Collapsed into a single line for the main login screen too
+        # Collapsing into a single line for the main login screen too
         st.markdown(f"<div style='text-align: center; padding: 1.5rem 0 1rem 0;'><div style='display: flex; justify-content: center; align-items: center; margin-bottom: 10px;'>{brain_icon}</div><div style='font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; color: #3E2723;'>{APP_NAME}</div><div style='margin-top: 0.5rem; font-size: 1rem; opacity: 0.75; color: #5D4037;'>{APP_SUBTITLE}</div></div>", unsafe_allow_html=True)

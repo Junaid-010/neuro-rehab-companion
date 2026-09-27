@@ -1,7 +1,18 @@
+# Core framework and UI component libraries
 streamlit==1.32.0
-mediapipe==0.10.9
+audio-recorder-streamlit==0.0.8
+
+# Edge-native Computer Vision & Matrix Mathematics libraries
+mediapipe==0.10.14
 opencv-python==4.9.0.80
 numpy==1.26.4
+Pillow==10.4.0
+
+# Data structuring for clinical telemetry calculations and analysis library
 pandas==2.2.1
+
+# Offline Acoustic & NLP Orchestration libraries
 SpeechRecognition==3.10.0
-audio-recorder-streamlit==0.0.8
+vosk==0.3.44
+transformers==4.38.2
+torch==2.2.1

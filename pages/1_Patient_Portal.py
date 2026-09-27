@@ -1,3 +1,4 @@
+# Importing necessary libraries for the patient portal
 import streamlit as st
 import cv2
 import mediapipe as mp
@@ -5,6 +6,9 @@ import time
 import io
 import datetime
 import subprocess
+import logging
+import json
+import os
 import speech_recognition as sr
 from audio_recorder_streamlit import audio_recorder
 import database as db
@@ -24,6 +28,7 @@ if not st.session_state.get("authenticated") or st.session_state.get("user", {})
 user = st.session_state.user
 inject_patient_theme()
 
+# Macro-State initialization
 if "macro_state" not in st.session_state: st.session_state.macro_state = "SAFETY_SCAN"
 if "db_session_id" not in st.session_state: st.session_state.db_session_id = None
 if "final_reps" not in st.session_state: st.session_state.final_reps = 0
@@ -32,10 +37,15 @@ if "session_start_time" not in st.session_state: st.session_state.session_start_
 target_reps = 5
 
 def trigger_voice(text):
-    subprocess.Popen(["say", text])
+    # Defensive TTS handler. It uses native macOS 'say' but fails gracefully to prevent application crashes on Windows or Linux operating systems.
+    try:
+        subprocess.Popen(["say", text])
+    except Exception as e:
+        logging.warning(f"Audio playback skipped. Native TTS not supported on this OS: {e}")
 
 # ================================================================
 # DYNAMIC EXERCISE ROUTING
+# This will automatically binds the correct FSM and procedural animation based on patient profile
 # ================================================================
 stroke_type = user.get("stroke_type", "Not Sure")
 
@@ -53,7 +63,7 @@ else:
     video_file = "reach_demo.gif"
 
 # ================================================================
-# UI HEADER & PROGRESS SCALE
+# UI HEADER and PROGRESS SCALE
 # ================================================================
 col_left, col_right = st.columns([5, 1])
 with col_left:
@@ -77,6 +87,7 @@ st.write("---")
 
 # ====================================================================
 # STATE 1: SAFETY_SCAN
+# This forces the patient throughspatial alignment checks prior to execution to prevent GIGO data
 # ====================================================================
 if st.session_state.macro_state == "SAFETY_SCAN":
     st.markdown(f"<h3 style='display: flex; align-items: center;'>{get_icon_svg('Activity', 28)} Full Body Posture Check</h3>", unsafe_allow_html=True)
@@ -121,7 +132,7 @@ elif st.session_state.macro_state == "SESSION_IDLE":
         st.rerun()
 
 # ====================================================================
-# STATE 3: ACTIVE (Side-by-Side Video & Camera)
+# STATE 3: ACTIVE (Triple-Model Orchestration: MediaPipe Loop)
 # ====================================================================
 elif st.session_state.macro_state == "ACTIVE":
     
@@ -140,16 +151,20 @@ elif st.session_state.macro_state == "ACTIVE":
 
     st.write("---")
     
-    # Side-by-Side Layout for Demo and Camera
+    # Side-by-Side Layout for Demo Video and Camera
     col_demo, col_cam = st.columns(2)
     
     with col_demo:
         st.markdown("#### Demonstration")
         try:
-            st.image(video_file, use_container_width=True)
+            # Dynamically resolving the absolute path to the GIF in the root directory
+            root_path = os.path.dirname(os.path.dirname(__file__))
+            video_path = os.path.join(root_path, video_file)
+            
+            st.image(video_path, use_column_width=True)
             st.caption("Move in sync with the model.")
-        except Exception:
-            st.error(f"Missing {video_file}. Please run generate_video.py first.")
+        except Exception as e:
+            st.error(f"Missing {video_file}. Please run generate_video.py first. Error: {e}")
             
     with col_cam:
         st.markdown("#### Your Camera")
@@ -179,11 +194,14 @@ elif st.session_state.macro_state == "ACTIVE":
                 is_calib = True
                 feedback = "Perfect. Begin reaching."
             else:
+                # Validating the stroke movement and extracting the MACHINE LEARNING features
                 reps, feedback, is_breach, ml_features = module.evaluate_stroke_kinematics(res.pose_landmarks.landmark, mp_pose)
+                # PersistING telemetry to SQLite at roughly 30 FPS
                 db.log_kinematic_telemetry(st.session_state.db_session_id, user['user_id'], ex_name, ml_features)
             
             mp.solutions.drawing_utils.draw_landmarks(rgb, res.pose_landmarks, mp_pose.POSE_CONNECTIONS)
             
+            # Debouncing audio triggers to prevent overlapping TTS commands
             if feedback and (time.time() - last_voice > 4.0):
                 trigger_voice(feedback)
                 last_voice = time.time()
@@ -212,7 +230,7 @@ elif st.session_state.macro_state == "ACTIVE":
         st.rerun()
 
 # ====================================================================
-# STATE 4: CHECK_IN (Psychological NLP)
+# STATE 4: CHECK_IN (Triple-Model Orchestrator: Vosk + DistilBERT) (Psychological Companion)
 # ====================================================================
 elif st.session_state.macro_state == "CHECK_IN":
     st.markdown(f"<h3 style='display: flex; align-items: center;'>{get_icon_svg('Mic', 24)} Psychological Check-In</h3>", unsafe_allow_html=True)
@@ -229,40 +247,30 @@ elif st.session_state.macro_state == "CHECK_IN":
     if manual_text:
         patient_text = manual_text
     elif audio_bytes:
-        with st.spinner("Processing audio..."):
+        with st.spinner("Processing audio offline..."):
             try:
                 r = sr.Recognizer()
                 with sr.AudioFile(io.BytesIO(audio_bytes)) as source:
                     audio_data = r.record(source)
-                    patient_text = r.recognize_google(audio_data)
+                    # Utilizing lightweight offline Vosk engine to transcribe speech natively
+                    vosk_result = r.recognize_vosk(audio_data)
+                    patient_text = json.loads(vosk_result).get("text", "")
+                    
+                    if not patient_text.strip():
+                         st.warning("Audio was captured but no words were detected. Please try typing.")
+                         
             except sr.UnknownValueError:
                 st.error("Audio unclear. Please try speaking closer to the microphone, or type your response.")
-            except sr.RequestError as e:
-                st.error(f"Could not reach Speech Recognition service. Please type your response. (API Error: {e})")
             except Exception as e:
-                st.error(f"An unexpected error occurred: {e}")
-                
-    # if patient_text:
-    #     psych = PsychologicalCompanion()
-    #     sentiment, reply = psych.analyze_sentiment_and_respond(patient_text)
-    #     db.log_psychology_sentiment(st.session_state.db_session_id, user['user_id'], patient_text, sentiment, reply)
-    #     trigger_voice(reply)
-        
-    #     st.write(f"**You shared:** *\"{patient_text}\"*")
-    #     st.success(f"**Your Companion:** {reply}")
-        
-    #     if st.button("Complete Session", type="primary"):
-    #         db.conclude_exercise_session(st.session_state.db_session_id, st.session_state.final_reps)
-    #         st.session_state.macro_state = "COMPLETED"
-    #         st.rerun()
+                st.error(f"An unexpected offline STT error occurred: {e}")
     
     if patient_text:
         psych = PsychologicalCompanion()
         
-        # SLM processes the text to get the Mood (sentiment) and the empathetic reply
+        # Passing the transcript to the local Hugging Face Neural Network (DistilBERT)for sentiment analysis and response generation
         sentiment, reply = psych.analyze_sentiment_and_respond(patient_text)
         
-        # Log to SQLite
+        # Logging to SQLite
         db.log_psychology_sentiment(st.session_state.db_session_id, user['user_id'], patient_text, sentiment, reply)
         
         st.write(f"**You shared:** *\"{patient_text}\"*")
@@ -272,23 +280,19 @@ elif st.session_state.macro_state == "CHECK_IN":
         # ==========================================================
         st.markdown("### Your Digital Companion Says:")
         
-        # Clean the sentiment string just in case it has extra spaces or capitalization
         detected_mood = str(sentiment).strip().lower()
         
-        if detected_mood in ["positive", "happy", "optimistic", "good"]:
+        if detected_mood in ["positive", "motivated", "happy", "optimistic", "good"]:
             st.success(f"**Mood Detected:** {sentiment.capitalize()} 🌟")
             st.info(f"💬 {reply}")
-        elif detected_mood in ["negative", "frustrated", "sad", "tired", "angry"]:
+        elif detected_mood in ["negative", "needs support", "frustrated", "sad", "tired", "angry"]:
             st.warning(f"**Mood Detected:** {sentiment.capitalize()} 💙 (Tough days are a normal part of neuroplasticity)")
             st.info(f"💬 {reply}")
         else:
-            # Fallback for Neutral, Mixed, or Unknown sentiments
             st.write(f"**Mood Detected:** {sentiment.capitalize()} ⚖️")
             st.info(f"💬 {reply}")
             
-        # Trigger the voice response asynchronously so the UI doesn't freeze
         trigger_voice(reply)
-        # ==========================================================
         
         if st.button("Complete Session", type="primary"):
             db.conclude_exercise_session(st.session_state.db_session_id, st.session_state.final_reps)

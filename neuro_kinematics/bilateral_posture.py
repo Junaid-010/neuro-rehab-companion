@@ -1,14 +1,14 @@
+# Importing essential libraries for numerical computations and time tracking.
 import time
 from neuro_kinematics.base_movement import BaseMovement, MovementState
 
 class BilateralPostureMovement(BaseMovement):
+    # Kinematic FSM for Posterior Stroke profiles. This focuses on dual-limb synchronization and symmetry.
     def __init__(self):
         super().__init__()
-        # Maximum allowed difference between left/right wrist vertical positions
+        # The maximum allowed discrepancy between left/right wrist vertical positions
         self.symmetry_threshold = 0.08
-        # Maximum allowed difference between left/right elbow angles
         self.angle_symmetry_threshold = 20.0
-        
         self.extension_target = 120.0
         self.retraction_target = 60.0
 
@@ -32,7 +32,7 @@ class BilateralPostureMovement(BaseMovement):
         safety_breach_alert = False
         compensation_metric = max(height_diff, angle_difference)
 
-        # 1. INVALID / SAFETY TRAP
+        # 1. Invalidating the movement if arms are raised asymmetrically
         if height_diff > self.symmetry_threshold or angle_difference > self.angle_symmetry_threshold:
             self.state = MovementState.INVALID
             guidance_feedback = "COORDINATION WARNING: Your arms are uneven. Balance your movement."
@@ -60,9 +60,9 @@ class BilateralPostureMovement(BaseMovement):
                 self.state = MovementState.REP_COMPLETE
                 self.repetition_count += 1
                 guidance_feedback = "Repetition validated! Great bilateral symmetry."
-                # Reset ROM tracking for the next repetition
+                # Resetting ROM tracking for the next repetition
                 self.min_angle, self.max_angle = 999.0, 0.0
 
-        # 3. GENERATE ML FEATURES
+        # 3. GENERATING MACHINE LEARNING FEATURES
         features = self.generate_feature_vector(average_arm_angle, compensation_metric, safety_breach_alert)
         return self.repetition_count, guidance_feedback, safety_breach_alert, features

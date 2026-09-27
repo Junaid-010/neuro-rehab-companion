@@ -1,17 +1,21 @@
+# Importing necessary libraries
 import streamlit as st
 import time
 import database as db
 from utils.ui_theme import get_icon_svg
 
+# Initializing the application with a clean, minimalistic UI layout
 st.set_page_config(page_title="Neuro-Rehabilitation Companion", page_icon="🧠", layout="centered", initial_sidebar_state="collapsed")
 st.markdown("""<style>[data-testid="collapsedControl"], [data-testid="stSidebar"] {display: none !important;} .stApp {background-color: #FAF7F2;} h1, h2, h3 {color: #3E2723;}</style>""", unsafe_allow_html=True)
 
+# Ensuring that the local SQLite schema is built before allowing user interactions
 db.init_db()
 
 if "authenticated" not in st.session_state: st.session_state.authenticated = False
 if "user" not in st.session_state: st.session_state.user = None
 if "onboarding_step" not in st.session_state: st.session_state.onboarding_step = "landing"
 
+# Role-Based Access Control (RBAC) Router which is strictly isolating patient data from clinician access layers
 if st.session_state.authenticated and st.session_state.user:
     role = st.session_state.user.get("role")
     if role == "Patient": st.switch_page("pages/1_Patient_Portal.py")
@@ -25,7 +29,7 @@ if st.session_state.onboarding_step == "landing":
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("🌟 I am a New Patient", type="primary", use_container_width=True):
+        if st.button(" I am a New Patient", type="primary", use_container_width=True):
             st.session_state.onboarding_step = "register"
             st.rerun()
         if st.button("Log In (Returning Patient)", use_container_width=True):
@@ -33,6 +37,8 @@ if st.session_state.onboarding_step == "landing":
             st.rerun()
             
     st.write("---")
+    
+    # Administrative login for clinical staff
     with st.expander(f"{get_icon_svg('Lock', 18)} Doctor & Therapist Login"):
         c_user = st.text_input("Staff ID")
         c_pass = st.text_input("Password", type="password")
@@ -69,6 +75,7 @@ elif st.session_state.onboarding_step == "register":
         new_pass = st.text_input("Choose a Password", type="password")
         name = st.text_input("Your Full Name")
         age = st.number_input("Your Age", min_value=18, max_value=100, value=60)
+        # Clinical parameters that determine which kinematic FSM is loaded afterwards
         stroke_type = st.selectbox("What type of stroke did you have? (If known)", ["Ischemic (Anterior MCA)", "Ischemic (Posterior)", "Hemorrhagic", "Not Sure"])
         affected_side = st.radio("Which side of your body needs therapy?", ["Left", "Right"])
         

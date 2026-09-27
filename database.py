@@ -1,8 +1,10 @@
+# Importing necessary libraries
 import sqlite3
 import hashlib
 import os
 import datetime
 
+# Database has been kept local to ensure 100% data privacy and edge compliance
 DB_NAME = "rehab_engine.db"
 
 def get_connection():
@@ -14,7 +16,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # 1. IDENTITY & RBAC
+    # 1. IDENTITY and ROLE-BASED ACCESS CONTROL (RBAC) MANAGEMENT
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,7 +32,7 @@ def init_db():
     );
     """)
 
-    # 2. LONGITUDINAL PROGRESS (Stage 6)
+    # 2. LONGITUDINAL PROGRESS TRACKING
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS user_progress (
         user_id INTEGER PRIMARY KEY,
@@ -43,7 +45,7 @@ def init_db():
     );
     """)
 
-    # 3. MACRO-SESSION CONTEXT
+    # 3. MACRO-SESSION CONTEXT MANAGEMENT
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS exercise_sessions (
         session_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,7 +57,8 @@ def init_db():
     );
     """)
     
-    # 4. MICRO-TELEMETRY & ML FEATURE VECTOR (Stage 11 & 16)
+    # 4. MICRO-TELEMETRY and MACHINE LEARNING FEATURE VECTOR 
+    # This structure is strictly formatted to serve as training data for future predictive ML models
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS kinematic_telemetry (
         log_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,7 +107,7 @@ def init_db():
     conn.close()
 
 # =====================================================================
-# CRYPTOGRAPHY: PBKDF2-HMAC-SHA256 (Stage 2 Hardening)
+# CRYPTOGRAPHY: PBKDF2-HMAC-SHA256 
 # =====================================================================
 def hash_password_pbkdf2(password: str, salt: bytes = None) -> str:
     """Generates a secure PBKDF2 hash using a cryptographically random salt."""
@@ -121,12 +124,12 @@ def verify_password(stored_hash: str, provided_password: str) -> bool:
         test_key = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'), salt, 100000).hex()
         return test_key == key_hex
     else:
-        # Legacy fallback for prototype accounts created prior to Stage 2
+        # Legacy fallback for prototype accounts created prior to Stage 2 security hardening
         legacy_test = hashlib.sha256(provided_password.encode()).hexdigest()
         return legacy_test == stored_hash
 
 # =====================================================================
-# AUTHENTICATION & IDENTITY
+# AUTHENTICATION and IDENTITY
 # =====================================================================
 def authenticate_user(username, password):
     if not username or not password:
@@ -138,7 +141,7 @@ def authenticate_user(username, password):
     user = cursor.fetchone()
     
     if user and verify_password(user['password_hash'], password):
-        # MIGRATION TRIGGER: Upgrade legacy hashes to PBKDF2 seamlessly
+        # MIGRATION TRIGGER: Upgrading legacy hashes to PBKDF2 seamlessly upon a successful login
         if ':' not in user['password_hash']:
             new_hash = hash_password_pbkdf2(password)
             cursor.execute("UPDATE users SET password_hash = ? WHERE user_id = ?", (new_hash, user['user_id']))
@@ -153,7 +156,7 @@ def register_user(username, password, full_name, age, stroke_type, affected_side
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        # Insert user identity
+        # Inserting user identity with immediate cryptographic hashing
         cursor.execute("""
         INSERT INTO users (username, password_hash, full_name, age, stroke_type, affected_side, role)
         VALUES (?, ?, ?, ?, ?, ?, 'Patient')
@@ -161,7 +164,7 @@ def register_user(username, password, full_name, age, stroke_type, affected_side
         
         user_id = cursor.lastrowid
         
-        # Initialize user progress record
+        # Initializing user progress record
         cursor.execute("INSERT INTO user_progress (user_id) VALUES (?)", (user_id,))
         
         conn.commit()
@@ -173,7 +176,7 @@ def register_user(username, password, full_name, age, stroke_type, affected_side
 
 def sanitize_user_record(user):
     if user is None: return None
-    # # Convert the sqlite3.Row to a standard dictionary first
+    # # Converting the sqlite3.Row to a standard dictionary first
     # user_dict = dict(user)
     return {
         "user_id": user["user_id"],
@@ -192,7 +195,7 @@ def get_all_patients():
     return patients
 
 # =====================================================================
-# MACRO-SESSION & MICRO-TELEMETRY LOGGING (Stages 5, 11 & 16)
+# MACRO-SESSION and MICRO-TELEMETRY LOGGING LOGIC
 # =====================================================================
 def create_exercise_session(user_id: int) -> int:
     """Initializes a new session and returns the session_id."""
@@ -246,13 +249,13 @@ def conclude_exercise_session(session_id: int, completed_reps: int):
     conn = get_connection()
     cursor = conn.cursor()
     
-    # 1. Close the session
+    # 1. Closing the session
     end_time = datetime.datetime.now().isoformat()
     cursor.execute("""
     UPDATE exercise_sessions SET session_status = 'COMPLETED', end_time = ? WHERE session_id = ?
     """, (end_time, session_id))
     
-    # 2. Update progress/streaks
+    # 2. Updating progress/streaks
     today = datetime.date.today().isoformat()
     cursor.execute("SELECT last_session_date, current_streak, best_streak FROM user_progress WHERE user_id = (SELECT user_id FROM exercise_sessions WHERE session_id = ?)", (session_id,))
     progress = cursor.fetchone()
@@ -263,7 +266,7 @@ def conclude_exercise_session(session_id: int, completed_reps: int):
         best_streak = progress['best_streak']
         
         if last_date != today:
-            # Simple streak logic: if it's a new day, increment streak. (A true production app checks if delta == 1 day)
+            # Simple streak logic: if it's a new day, increment streak. 
             current_streak += 1
             if current_streak > best_streak:
                 best_streak = current_streak

@@ -1,8 +1,13 @@
+# Importing necessary libraries
 import cv2
 import mediapipe as mp
 import numpy as np
 
 class FullBodyReadinessScan:
+    
+    # Pre-Exercise Clinical Screener
+    # This evaluates spatial visibility constraints before allowing the kinematic FSM to begin. It also prevents garbage-in, garbage-out (GIGO) errors by ensuring the camera can see both the shoulders and hips for accurate trunk lean calculations.
+    
     def __init__(self):
         self.mp_pose = mp.solutions.pose
         self.pose = self.mp_pose.Pose(
@@ -12,10 +17,8 @@ class FullBodyReadinessScan:
         )
 
     def evaluate_full_body_readiness(self, rgb_image):
-        """
-        Evaluates if the patient's full upper body (shoulders and hips) 
-        is visible and vertically aligned before starting exercise.
-        """
+        
+    # This evaluates if the patient's full upper body (shoulders and hips) is visible and vertically aligned before starting exercise.
         results = self.pose.process(rgb_image)
         
         if not results.pose_landmarks:
@@ -23,13 +26,13 @@ class FullBodyReadinessScan:
             
         landmarks = results.pose_landmarks.landmark
         
-        # Extract visibility scores for key posture landmarks
+        # Extracting visibility scores for key posture landmarks
         l_shoulder_vis = landmarks[self.mp_pose.PoseLandmark.LEFT_SHOULDER.value].visibility
         r_shoulder_vis = landmarks[self.mp_pose.PoseLandmark.RIGHT_SHOULDER.value].visibility
         l_hip_vis = landmarks[self.mp_pose.PoseLandmark.LEFT_HIP.value].visibility
         r_hip_vis = landmarks[self.mp_pose.PoseLandmark.RIGHT_HIP.value].visibility
         
-        # Verify the camera can see the patient's torso for accurate kinematics
+        # Verifying the camera can see the patient's torso for accurate kinematics
         is_visible = all(vis > 0.6 for vis in [l_shoulder_vis, r_shoulder_vis, l_hip_vis, r_hip_vis])
         
         if is_visible:
