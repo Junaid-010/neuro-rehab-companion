@@ -126,6 +126,6 @@ Future Work:
 
 Based on the above assessment, future development plans of the project involve:
 
-2. Generative SLM Integration: Switching from the existing DistilBERT classification model to a purely Generative local Small Language Model (e.g., Llama 3 8B) for dynamic conversational support, once edge hardware is optimized and accelerated accordingly.
-Predictive Machine Learning Classifiers: Using the vector of 10-point SQLite telemetry, train a Random Forest classifier that is able to predict patient fatigue before a biomechanical failure.
+1. Generative SLM Integration: Switching from the existing DistilBERT classification model to a purely Generative local Small Language Model (e.g., Llama 8B) for dynamic conversational support, once edge hardware is optimized and accelerated accordingly.
+2. Predictive Machine Learning Classifiers: Using the vector of 10-point SQLite telemetry, train a Random Forest classifier that is able to predict patient fatigue before a biomechanical failure.
 3. Clinical Trials: Performing task-based evaluations with representative stroke survivors that are ethically approved clinical tests to demonstrate the actual clinical effectiveness of 3D models and baseline accuracy that extend well beyond computational simulation.
